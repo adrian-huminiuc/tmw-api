@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  api:
+    container_name: quiz-api
+    build:
+      dockerfile: ./ops/docker/Dockerfile
+      context: .
+    volumes:
+      - .:/home/node/service
+    command: npm run start:dev
+    ports:
+      - ${PORT}:${PORT}
+    env_file:
+      - .env
+    depends_on:
+      db:
+          condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db:
+    container_name: quiz-db
+    image: mysql:8.0.33
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./ops/development/db:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_DATABASE: quiz-db
+      MYSQL_SETTING_ONLY_FULL_GROUP_BY: 0
+    ports:
+      - "${DB_PORT}"
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-uroot", "-psecret"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db-data: ~
